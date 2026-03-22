@@ -1,0 +1,221 @@
+@"
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_CONNECTION_URI")
+}
+
+model Instance {
+  id                       String      @id @default(uuid())
+  name                     String      @unique
+  connectionStatus         String?
+  ownerJid                 String?
+  profileName              String?
+  profilePicUrl            String?
+  integration              String?
+  number                   String?
+  businessId               String?
+  token                    String?
+  clientName               String?
+  disconnectionReasonCode  Int?
+  disconnectionObject      String?
+  disconnectionAt          DateTime?
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+
+  Message    Message[]
+  Contact    Contact[]
+  Chat       Chat[]
+  Webhook    Webhook[]
+  Chatwoot   Chatwoot[]
+  Proxy      Proxy[]
+  Rabbitmq   Rabbitmq[]
+  Nats       Nats[]
+  Sqs        Sqs[]
+  Websocket  Websocket[]
+  Setting    Setting[]
+
+  @@map("Instance")
+}
+
+model Message {
+  id               String   @id @default(uuid())
+  keyId            String   @map("key_id")
+  keyRemoteJid     String   @map("key_remoteJid")
+  keyFromMe        Boolean  @map("key_fromMe")
+  keyParticipant   String?  @map("key_participant")
+  pushName         String?
+  message          String?  @db.Text
+  messageType      String
+  messageTimestamp BigInt
+  instanceId       String
+  source           String?
+  createdAt        DateTime @default(now())
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([keyRemoteJid, instanceId])
+  @@index([keyId, keyRemoteJid])
+  @@map("Message")
+}
+
+model Contact {
+  id            String   @id @default(uuid())
+  remoteJid     String
+  pushName      String?
+  profilePicUrl String?
+  instanceId    String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([remoteJid, instanceId])
+  @@index([instanceId])
+  @@map("Contact")
+}
+
+model Chat {
+  id          String   @id @default(uuid())
+  remoteJid   String
+  name        String?
+  isGroup     Boolean  @default(false)
+  isReadOnly  Boolean  @default(false)
+  isArchived  Boolean  @default(false)
+  notSpam     Boolean  @default(true)
+  unreadCount Int      @default(0)
+  instanceId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@unique([remoteJid, instanceId])
+  @@index([instanceId])
+  @@map("Chat")
+}
+
+model Webhook {
+  id         String   @id @default(uuid())
+  url        String
+  enabled    Boolean  @default(true)
+  events     String[]
+  instanceId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("Webhook")
+}
+
+model Chatwoot {
+  id                    String   @id @default(uuid())
+  enabled               Boolean  @default(false)
+  accountId             String?
+  token                 String?
+  url                   String?
+  signMsg               Boolean  @default(false)
+  reopenConversation    Boolean  @default(false)
+  conversationPending   Boolean  @default(false)
+  instanceId            String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("Chatwoot")
+}
+
+model Proxy {
+  id         String   @id @default(uuid())
+  enabled    Boolean  @default(false)
+  host       String?
+  port       String?
+  protocol   String?
+  username   String?
+  password   String?
+  instanceId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("Proxy")
+}
+
+model Rabbitmq {
+  id         String   @id @default(uuid())
+  enabled    Boolean  @default(false)
+  events     String[]
+  instanceId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("Rabbitmq")
+}
+
+model Nats {
+  id         String   @id @default(uuid())
+  enabled    Boolean  @default(false)
+  events     String[]
+  instanceId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("Nats")
+}
+
+model Sqs {
+  id         String   @id @default(uuid())
+  enabled    Boolean  @default(false)
+  events     String[]
+  instanceId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("Sqs")
+}
+
+model Websocket {
+  id         String   @id @default(uuid())
+  enabled    Boolean  @default(false)
+  events     String[]
+  instanceId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("Websocket")
+}
+
+model Setting {
+  id                       String   @id @default(uuid())
+  rejectCall               Boolean  @default(false)
+  msgCall                  String?
+  groupsIgnore             Boolean  @default(false)
+  alwaysOnline             Boolean  @default(false)
+  readMessages             Boolean  @default(false)
+  readStatus               Boolean  @default(false)
+  syncFullHistory          Boolean  @default(false)
+  instanceId               String
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  instance Instance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@map("Setting")
+}
+"@ | Out-File -FilePath .\prisma\schema.prisma -Encoding UTF8 -NoNewline
+
+Write-Host "✅ Schema completo criado!" -ForegroundColor Green
