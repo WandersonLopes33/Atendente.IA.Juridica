@@ -42,3 +42,5 @@ coverage/
 # Temporary
 tmp/
 temp/
+
+por.traineddata
