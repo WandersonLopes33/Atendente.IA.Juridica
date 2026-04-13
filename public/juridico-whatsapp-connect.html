@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jurídico — Conectar WhatsApp</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #080a0f;
+    color: #c8d8f0;
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(120,80,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(120,80,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .card {
+    background: #0d0f1a;
+    border: 1px solid #1a1f35;
+    border-radius: 16px;
+    padding: 40px;
+    width: 100%;
+    max-width: 480px;
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.5s ease;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #7850ff, #a78bfa, #7850ff);
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #a78bfa;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: #3a3f60;
+    letter-spacing: 2px;
+    margin-bottom: 28px;
+  }
+
+  .field {
+    margin-bottom: 14px;
+  }
+
+  label {
+    display: block;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.65rem;
+    color: #3a3f60;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  input {
+    width: 100%;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid #1a1f35;
+    border-radius: 6px;
+    padding: 10px 14px;
+    color: #c8d8f0;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.8rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus { border-color: #7850ff; }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #5b30d4, #7850ff);
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    font-family: 'Syne', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+  }
+
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(120,80,255,0.35); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .btn-secondary {
+    background: rgba(120,80,255,0.1);
+    color: #a78bfa;
+    border: 1px solid rgba(120,80,255,0.3);
+    margin-top: 10px;
+  }
+  .btn-secondary:hover { background: rgba(120,80,255,0.2); box-shadow: 0 8px 24px rgba(120,80,255,0.2); }
+
+  .qr-area {
+    display: none;
+    text-align: center;
+    margin-top: 24px;
+    padding: 20px;
+    background: rgba(120,80,255,0.04);
+    border: 1px solid rgba(120,80,255,0.2);
+    border-radius: 10px;
+  }
+
+  .qr-area img {
+    width: 220px;
+    height: 220px;
+    border-radius: 8px;
+    border: 3px solid #7850ff;
+  }
+
+  .qr-label {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: #a78bfa;
+    letter-spacing: 2px;
+    margin-top: 12px;
+    display: block;
+  }
+
+  .status-box {
+    display: none;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.6;
+  }
+
+  .status-box.info    { background: rgba(120,80,255,0.08); border: 1px solid rgba(120,80,255,0.2); color: #a78bfa; }
+  .status-box.success { background: rgba(0,232,122,0.08);  border: 1px solid rgba(0,232,122,0.2);  color: #00e87a; }
+  .status-box.error   { background: rgba(255,61,90,0.08);  border: 1px solid rgba(255,61,90,0.2);  color: #ff3d5a; }
+
+  .pulse { animation: pulse 2s infinite; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes pulse  { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .connected-box {
+    display: none;
+    text-align: center;
+    padding: 20px;
+    background: rgba(0,232,122,0.06);
+    border: 1px solid rgba(0,232,122,0.3);
+    border-radius: 10px;
+    margin-top: 20px;
+  }
+
+  .connected-box .icon { font-size: 2.5rem; margin-bottom: 10px; }
+  .connected-box h2 { color: #00e87a; font-size: 1.1rem; letter-spacing: 2px; }
+  .connected-box p { font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #3a3f60; margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>⚖️ Lopes Advocacia</h1>
+  <p class="subtitle">// CONECTAR WHATSAPP — SISTEMA JURÍDICO</p>
+
+  <div class="field">
+    <label>URL da Evolution API</label>
+    <input type="text" id="apiUrl" value="http://localhost:8081" />
+  </div>
+
+  <div class="field">
+    <label>API Key</label>
+    <input type="text" id="apiKey" value="ViagemExpress_SecretKey_2025" />
+  </div>
+
+  <div class="field">
+    <label>Nome da Instância</label>
+    <input type="text" id="instanceName" value="Juridico" />
+  </div>
+
+  <button class="btn" id="btnCreate" onclick="createAndConnect()">
+    ⚡ Gerar QR Code
+  </button>
+
+  <button class="btn btn-secondary" id="btnRefresh" onclick="refreshQR()" style="display:none">
+    🔄 Atualizar QR Code
+  </button>
+
+  <div class="status-box info" id="statusBox"></div>
+
+  <div class="qr-area" id="qrArea">
+    <img id="qrImg" src="" alt="QR Code WhatsApp" />
+    <span class="qr-label pulse">📱 ESCANEIE COM O WHATSAPP</span>
+    <div style="margin-top:12px;font-family:'Share Tech Mono',monospace;font-size:0.65rem;color:#3a3f60">
+      WhatsApp → Dispositivos conectados → Conectar dispositivo
+    </div>
+  </div>
+
+  <div class="connected-box" id="connectedBox">
+    <div class="icon">✅</div>
+    <h2>CONECTADO!</h2>
+    <p>WhatsApp vinculado com sucesso ao Sistema Jurídico</p>
+    <p style="margin-top:8px;color:#a78bfa">Instância "Juridico" ativa — Lopes Advocacia</p>
+  </div>
+</div>
+
+<script>
+  var checkTimer = null;
+
+  function showStatus(msg, type) {
+    var box = document.getElementById('statusBox');
+    box.textContent = msg;
+    box.className = 'status-box ' + type;
+    box.style.display = 'block';
+  }
+
+  async function createAndConnect() {
+    var url      = document.getElementById('apiUrl').value.trim();
+    var key      = document.getElementById('apiKey').value.trim();
+    var instance = document.getElementById('instanceName').value.trim();
+    var btn      = document.getElementById('btnCreate');
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Conectando...';
+    showStatus('Buscando QR Code da instância "' + instance + '"...', 'info');
+
+    try {
+      var res = await fetch(url + '/instance/create', {
+        method: 'POST',
+        headers: { 'apikey': key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instanceName: instance, qrcode: true, integration: 'WHATSAPP-BAILEYS' })
+      });
+      var data = await res.json();
+
+      if (data.qrcode && data.qrcode.base64) {
+        displayQR(data.qrcode.base64);
+        showStatus('QR Code gerado! Escaneie com o WhatsApp.', 'success');
+        document.getElementById('btnRefresh').style.display = 'block';
+        startStatusCheck(url, key, instance);
+        btn.disabled = false;
+        btn.textContent = '⚡ Gerar QR Code';
+        return;
+      }
+    } catch (e) {}
+
+    await fetchQR(url, key, instance);
+  }
+
+  async function fetchQR(url, key, instance) {
+    var btn = document.getElementById('btnCreate');
+    try {
+      var res = await fetch(url + '/instance/connect/' + instance, {
+        headers: { 'apikey': key }
+      });
+      var data = await res.json();
+
+      if (data.base64) {
+        displayQR(data.base64);
+        showStatus('QR Code gerado! Escaneie com o WhatsApp.', 'success');
+        document.getElementById('btnRefresh').style.display = 'block';
+        startStatusCheck(url, key, instance);
+      } else if (data.instance && data.instance.state === 'open') {
+        showConnected();
+      } else {
+        showStatus('Erro: ' + JSON.stringify(data).slice(0, 120), 'error');
+      }
+    } catch (e) {
+      showStatus('Erro ao conectar: ' + e.message + '. Verifique se a Evolution API está acessível em ' + url, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '⚡ Gerar QR Code';
+    }
+  }
+
+  function displayQR(base64) {
+    var img = document.getElementById('qrImg');
+    img.src = base64.startsWith('data:') ? base64 : 'data:image/png;base64,' + base64;
+    document.getElementById('qrArea').style.display = 'block';
+  }
+
+  async function refreshQR() {
+    var url      = document.getElementById('apiUrl').value.trim();
+    var key      = document.getElementById('apiKey').value.trim();
+    var instance = document.getElementById('instanceName').value.trim();
+    showStatus('Atualizando QR Code...', 'info');
+    await fetchQR(url, key, instance);
+  }
+
+  function startStatusCheck(url, key, instance) {
+    if (checkTimer) clearInterval(checkTimer);
+    checkTimer = setInterval(async function() {
+      try {
+        var res  = await fetch(url + '/instance/connectionState/' + instance, { headers: { 'apikey': key } });
+        var data = await res.json();
+        if (data.instance && data.instance.state === 'open') {
+          clearInterval(checkTimer);
+          showConnected();
+        }
+      } catch (_) {}
+    }, 3000);
+  }
+
+  function showConnected() {
+    if (checkTimer) clearInterval(checkTimer);
+    document.getElementById('qrArea').style.display = 'none';
+    document.getElementById('statusBox').style.display = 'none';
+    document.getElementById('btnRefresh').style.display = 'none';
+    document.getElementById('connectedBox').style.display = 'block';
+  }
+</script>
+</body>
+</html>

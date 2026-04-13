@@ -1,4 +1,4 @@
-# 🤖 Dr. Rick — Sistema de Atendimento Jurídico via WhatsApp
+# 🤖 — Sistema de Atendimento Jurídico via WhatsApp
 ### Lopes Advocacia | Dr. Wanderson Mailson Machado Lopes | OAB/MA
 
 ---
@@ -591,5 +591,6 @@ Imperatriz, Maranhão — Brasil
 
 ---
 
-*Sistema Dr. Rick — Atendimento Jurídico Inteligente via WhatsApp*#   i a J u r i d i c a  
- 
+*Sistema Dr. Rick — Atendimento Jurídico Inteligente via WhatsApp*#   i a J u r i d i c a 
+ 
+ 

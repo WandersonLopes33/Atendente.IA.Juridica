@@ -10,6 +10,8 @@ const conversationTypeDetector = require('../services/conversationTypeDetector')
 const processmovementnotifier = require('../services/Processmovementnotifier');
 const newcasecollector = require('../services/Newcasecollector');
 const documentprocessor = require('../services/Documentprocessor');
+const advogadoChat = require('../services/advogadoChat');
+const monitoramento = require('../services/monitoramentoSilencioso');
 
 // ── Buffer: agrupa TODAS as mensagens do mesmo número por 2 minutos ──────────
 // Textos, imagens e documentos são acumulados juntos.
@@ -222,7 +224,6 @@ Responda "nao" (manter com advogado) se: mensagem pessoal, resposta a algo que o
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 
 router.post('/', async (req, res) => {
     try {
@@ -244,9 +245,43 @@ router.post('/', async (req, res) => {
             const { key, message: messageContent, pushName } = message;
             const phoneNumber = key.remoteJid.replace('@s.whatsapp.net', '');
 
-            // ── Ignorar mensagens próprias e grupos ───────────────────────────
-            if (key.fromMe) return res.status(200).json({ success: true });
+            // ── Ignorar grupos ────────────────────────────────────────────────
             if (key.remoteJid.includes('@g.us')) return res.status(200).json({ success: true });
+
+            // ── Mensagens próprias (fromMe) — só salvar se advogado está atendendo ──
+            // Quando transferido_para_humano = true, as mensagens que o Dr. Wanderson
+            // envia para o cliente chegam com fromMe = true. Salvamos para o histórico.
+            if (key.fromMe) {
+                const textoAdvogado = messageContent?.conversation ||
+                    messageContent?.extendedTextMessage?.text || '';
+
+                if (textoAdvogado && textoAdvogado.trim()) {
+                    // Verificar se há conversa ativa transferida para este número
+                    (async () => {
+                        try {
+                            const convRes = await db.query(
+                                `SELECT id FROM conversations
+                                 WHERE telefone = $1
+                                   AND status != 'closed'
+                                   AND transferido_para_humano = TRUE
+                                 ORDER BY updated_at DESC LIMIT 1`,
+                                [phoneNumber]
+                            );
+                            if (convRes.rows.length > 0) {
+                                await monitoramento.processarMensagemMonitorada(
+                                    convRes.rows[0].id,
+                                    phoneNumber,
+                                    textoAdvogado,
+                                    'advogado'
+                                );
+                            }
+                        } catch (e) {
+                            // Silencioso — não bloquear o fluxo
+                        }
+                    })();
+                }
+                return res.status(200).json({ success: true });
+            }
 
             // ── Detectar tipo de mensagem ─────────────────────────────────────
             // Evolution API v2 às vezes encapsula em messageContextInfo
@@ -321,25 +356,97 @@ router.post('/', async (req, res) => {
                 // Não bloqueia o fluxo se falhar — continua com histórico vazio
             }
 
-            const filterDecision = await conversationTypeDetector.shouldRespond(
-                {
-                    message: messageText || '[midia]',
-                    fromMe: key.fromMe,
-                    isGroup: key.remoteJid.includes('@g.us'),
-                    groupName: pushName || '',
-                    groupDescription: '',
-                    phoneNumber
-                },
-                historicoParaFiltro
-            );
+            // ── Filtro combinado: pessoal + relevância jurídica ───────────────
+            // Classifica em 3 categorias:
+            //   "juridico"  → responder (assunto de advocacia/direito)
+            //   "saudacao"  → responder (primeiro contato, contexto vazio)
+            //   "ignorar"   → silêncio total (pessoal, spam, outros negócios)
+            //
+            // "incerto" com histórico jurídico ativo → tratar como jurídico
+            // "incerto" sem histórico → ignorar (evita responder boleto, provedor, etc.)
 
-            if (!filterDecision.shouldRespond) {
-                logger.info('Mensagem filtrada pelo detector', {
-                    reason: filterDecision.reason,
-                    phoneNumber,
-                    message: (messageText || '').substring(0, 80)
-                });
-                return res.status(200).json({ success: true, action: 'filtered' });
+            // Advogado nunca é filtrado
+            if (!isAdvogado(phoneNumber)) {
+                let deveIgnorar = false;
+
+                try {
+                    const textoFiltro = messageText || '[mídia recebida]';
+                    const historicoTexto = historicoParaFiltro.length > 0
+                        ? historicoParaFiltro
+                            .map(m => `[${m.sender === 'customer' ? 'CLIENTE' : 'BOT'}]: ${m.conteudo}`)
+                            .join('\n')
+                        : 'Sem histórico — primeira mensagem.';
+
+                    const respFiltro = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+                        },
+                        body: JSON.stringify({
+                            model: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+                            messages: [
+                                {
+                                    role: 'system',
+                                    content: `Você é o filtro de entrada de um escritório de advocacia no WhatsApp.
+Analise a mensagem recebida e o histórico recente. Classifique em UMA das categorias:
+
+"juridico" — assunto relacionado a direito, advocacia, processos judiciais, contratos, documentos jurídicos, consultas legais, divórcio, herança, trabalhista, previdenciário, criminal, agendamento com advogado, perguntas que um advogado pode responder. Também classifique como "juridico" mensagens curtas de continuação (ok, entendido, sim, não, obrigado) quando o HISTÓRICO já está tratando de assunto jurídico.
+
+"saudacao" — primeira mensagem de uma pessoa real sem histórico jurídico (ex: "olá", "bom dia", "oi preciso de ajuda") — deve ser respondida para entender o que a pessoa precisa.
+
+"ignorar" — tudo que NÃO é jurídico e não é de uma pessoa procurando um advogado:
+  • Mensagens automáticas de sistemas (boletos, cobranças, confirmações, provedores, bancos)
+  • Spam, propaganda, marketing
+  • Assuntos completamente fora de advocacia (delivery, saúde, tecnologia sem relação jurídica)
+  • Mensagens pessoais claramente não relacionadas a assunto jurídico
+  • Saudações genéricas quando o histórico mostra que é número de sistema ou spam
+  • Mensagens curtas ambíguas (ok, certo, entendido) quando NÃO há histórico jurídico
+
+Regra de ouro: na dúvida entre "juridico" e "ignorar", escolha "ignorar".
+Na dúvida entre "saudacao" e "ignorar" sem histórico, escolha "ignorar".
+Só responda "saudacao" quando for claramente uma pessoa real iniciando contato.
+
+Responda APENAS uma palavra: juridico, saudacao ou ignorar`
+                                },
+                                {
+                                    role: 'user',
+                                    content: `Histórico recente:\n${historicoTexto}\n\nMensagem recebida: "${textoFiltro}"\n\nClassifique:`
+                                }
+                            ],
+                            max_tokens: 10,
+                            temperature: 0.1
+                        })
+                    });
+
+                    if (respFiltro.ok) {
+                        const dadosFiltro = await respFiltro.json();
+                        const classificacao = dadosFiltro.choices[0].message.content
+                            .trim().toLowerCase().replace(/[^a-záéíóúãõç]/g, '');
+
+                        logger.info('Filtro jurídico', {
+                            phoneNumber,
+                            classificacao,
+                            message: textoFiltro.substring(0, 60)
+                        });
+
+                        if (classificacao === 'ignorar') {
+                            deveIgnorar = true;
+                        }
+                        // "juridico" e "saudacao" → continua normalmente
+                    }
+                } catch (filtroErr) {
+                    // Se o filtro falhar, continua (melhor responder do que ignorar cliente real)
+                    logger.warn('Filtro jurídico falhou — continuando', { error: filtroErr.message });
+                }
+
+                if (deveIgnorar) {
+                    logger.info('Mensagem ignorada pelo filtro jurídico', {
+                        phoneNumber,
+                        message: (messageText || '').substring(0, 80)
+                    });
+                    return res.status(200).json({ success: true, action: 'filtered_non_juridico' });
+                }
             }
 
             // ── Comando direto #email — sem buffer ───────────────────────────
@@ -350,6 +457,31 @@ router.post('/', async (req, res) => {
                     return res.status(200).json({ success: true });
                 }
                 await emailService.handleWhatsAppCommand(messageText, phoneNumber);
+                return res.status(200).json({ success: true });
+            }
+
+            // ── Comando #chat — canal privado advogado ↔ IA ─────────────────
+            // Só o advogado pode usar. Resposta imediata sem buffer.
+            if (messageText.trim().toLowerCase().startsWith('#chat')) {
+                if (!isAdvogado(phoneNumber)) {
+                    await evolutionAPI.sendTextMessage(phoneNumber,
+                        'Este comando é exclusivo do advogado.');
+                    return res.status(200).json({ success: true });
+                }
+                try {
+                    await evolutionAPI.sendTyping(phoneNumber, true).catch(() => {});
+                    const respostaChat = await advogadoChat.processarChatAdvogado(messageText.trim());
+                    await evolutionAPI.sendTyping(phoneNumber, false).catch(() => {});
+                    await evolutionAPI.sendTextMessage(phoneNumber, respostaChat);
+                    logger.info('Chat advogado processado', {
+                        comando: messageText.substring(0, 60)
+                    });
+                } catch (chatErr) {
+                    await evolutionAPI.sendTyping(phoneNumber, false).catch(() => {});
+                    logger.error('Erro no chat do advogado', { error: chatErr.message });
+                    await evolutionAPI.sendTextMessage(phoneNumber,
+                        '❌ Erro ao processar comando. Tente novamente.');
+                }
                 return res.status(200).json({ success: true });
             }
 
@@ -502,18 +634,25 @@ router.post('/', async (req, res) => {
                     const estaTransferido = convAtualResult.rows[0]?.transferido_para_humano === true;
 
                     if (estaTransferido) {
+                        // Monitoramento silencioso — salva a mensagem do cliente sem interagir
+                        await monitoramento.processarMensagemMonitorada(
+                            conversationId, phoneNumber, combinedText, 'cliente'
+                        );
+
                         const deveRetomar = await deveRetomarAposTransferencia(combinedText, historicoParaFiltro);
 
                         if (deveRetomar) {
                             logger.info('Bot retomando conversa transferida (assunto profissional)', {
                                 conversationId, phoneNumber
                             });
+                            // Gerar resumo do atendimento humano antes de retomar
+                            monitoramento.encerrarAtendimentoHumano(conversationId).catch(() => {});
                             await db.query(
                                 'UPDATE conversations SET transferido_para_humano = FALSE, updated_at = NOW() WHERE id = $1',
                                 [conversationId]
                             );
                         } else {
-                            logger.info('Conversa transferida — mensagem ignorada pelo bot', {
+                            logger.info('Conversa transferida — monitorando silenciosamente', {
                                 conversationId, phoneNumber,
                                 message: combinedText.substring(0, 60)
                             });

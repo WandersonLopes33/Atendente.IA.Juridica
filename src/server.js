@@ -1,4 +1,5 @@
 require('dotenv').config(); // <--- ADICIONADO: Carregar variáveis do .env
+const path = require('path');
 
 const express = require('express');
 const cors = require('cors');
@@ -12,6 +13,7 @@ const groqAI = require('../services/groqAI');
 const conversationRecovery = require('../services/conversationRecovery');
 const emailService = require('../services/emailService');
 const monitoramentoProcessual = require('../services/monitoramentoProcessualService');
+const agendaService = require('../services/agendaService');
 
 // Rotas
 const webhookRoutes = require('../routes/webhook');
@@ -31,6 +33,8 @@ const PORT = process.env.PORT || 3001;
 // ── Middlewares ───────────────────────────────────────────────────────────────
 
 app.use(cors());
+app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(morgan('combined', {
@@ -152,6 +156,9 @@ const server = app.listen(PORT, async () => {
         logger.error('Erro ao verificar status', { error: error.message });
         logger.info('WhatsApp nao conectado. Use /api/whatsapp/qrcode para conectar');
     }
+
+    // Agenda — alertas a cada 5 minutos
+    agendaService.iniciarAlertas();
 });
 
 // ── Graceful Shutdown ─────────────────────────────────────────────────────────

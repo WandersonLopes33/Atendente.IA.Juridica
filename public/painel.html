@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lopes Advocacia — Painel</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #1a1d24;
+    --border: #252830;
+    --gold: #c9a84c;
+    --gold-dim: #8a6e30;
+    --gold-glow: rgba(201,168,76,0.12);
+    --green: #2ecc71;
+    --green-dim: rgba(46,204,113,0.15);
+    --red: #e74c3c;
+    --red-dim: rgba(231,76,60,0.15);
+    --blue: #3498db;
+    --blue-dim: rgba(52,152,219,0.15);
+    --text: #e8e4dc;
+    --text-muted: #6b7280;
+    --text-dim: #9ca3af;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Background texture */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 50% -20%, rgba(201,168,76,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 90% 80%, rgba(52,152,219,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .logo-area {
+    padding: 28px 24px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo-badge {
+    width: 40px;
+    height: 40px;
+    background: var(--gold);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: #0a0c10;
+    margin-bottom: 12px;
+  }
+
+  .logo-name {
+    font-family: 'DM Serif Display', serif;
+    font-size: 15px;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .logo-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+
+  .nav { padding: 16px 12px; flex: 1; }
+
+  .nav-section {
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 12px 12px 6px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    transition: all 0.15s;
+    margin-bottom: 2px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+
+  .nav-item.active {
+    background: var(--gold-glow);
+    color: var(--gold);
+    border: 1px solid rgba(201,168,76,0.2);
+  }
+
+  .nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    margin-right: 6px;
+    box-shadow: 0 0 6px var(--green);
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* ── Main ── */
+  .main {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .page-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--text);
+  }
+
+  .topbar-actions { display: flex; gap: 10px; align-items: center; }
+
+  .server-url-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 12px;
+    color: var(--text-muted);
+  }
+
+  .server-url-badge span { color: var(--gold); }
+
+  /* ── Content ── */
+  .content {
+    padding: 32px;
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  /* ── Panels ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── Cards ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: border-color 0.2s;
+  }
+
+  .card:hover { border-color: var(--gold-dim); }
+
+  .card-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .card-value {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: var(--text);
+  }
+
+  .card-sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  .card-value.green { color: var(--green); }
+  .card-value.gold { color: var(--gold); }
+  .card-value.red { color: var(--red); }
+
+  /* ── Section heading ── */
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 17px;
+    color: var(--text);
+  }
+
+  /* ── Buttons ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--gold);
+    color: #0a0c10;
+  }
+  .btn-primary:hover { background: #d4b05a; transform: translateY(-1px); }
+
+  .btn-ghost {
+    background: var(--surface2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--gold-dim); color: var(--text); }
+
+  .btn-danger {
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid rgba(231,76,60,0.3);
+  }
+  .btn-danger:hover { background: rgba(231,76,60,0.25); }
+
+  .btn-success {
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid rgba(46,204,113,0.3);
+  }
+  .btn-success:hover { background: rgba(46,204,113,0.25); }
+
+  /* ── WhatsApp Connect ── */
+  .connect-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 32px;
+    margin-bottom: 24px;
+  }
+
+  .qr-area {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+  }
+
+  .qr-frame {
+    width: 200px;
+    height: 200px;
+    background: white;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .qr-placeholder {
+    text-align: center;
+    color: #888;
+    font-size: 13px;
+    padding: 20px;
+  }
+
+  .qr-placeholder .qr-icon { font-size: 48px; margin-bottom: 8px; }
+
+  .qr-info { flex: 1; }
+
+  .qr-steps { list-style: none; margin: 16px 0; }
+
+  .qr-steps li {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 14px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .step-num {
+    width: 22px;
+    height: 22px;
+    background: var(--gold-glow);
+    border: 1px solid var(--gold-dim);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: var(--gold);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-bottom: 16px;
+  }
+
+  .status-badge.disconnected {
+    background: var(--red-dim);
+    color: var(--red);
+    border: 1px solid rgba(231,76,60,0.3);
+  }
+
+  .status-badge.connected {
+    background: var(--green-dim);
+    color: var(--green);
+    border: 1px solid rgba(46,204,113,0.3);
+  }
+
+  .status-badge.loading {
+    background: var(--blue-dim);
+    color: var(--blue);
+    border: 1px solid rgba(52,152,219,0.3);
+  }
+
+  /* ── Terminal / Log ── */
+  .log-box {
+    background: #080a0e;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    max-height: 280px;
+    overflow-y: auto;
+    margin-top: 24px;
+  }
+
+  .log-line {
+    padding: 3px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    display: flex;
+    gap: 12px;
+  }
+
+  .log-time { color: var(--text-muted); flex-shrink: 0; }
+  .log-level-ok { color: var(--green); }
+  .log-level-warn { color: var(--gold); }
+  .log-level-err { color: var(--red); }
+  .log-msg { color: var(--text-dim); }
+
+  /* ── API Tester ── */
+  .api-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .api-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .api-card-head {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .method-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+  }
+
+  .method-get { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(52,152,219,0.3); }
+  .method-post { background: var(--green-dim); color: var(--green); border: 1px solid rgba(46,204,113,0.3); }
+  .method-delete { background: var(--red-dim); color: var(--red); border: 1px solid rgba(231,76,60,0.3); }
+
+  .api-path {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .api-card-body { padding: 18px; }
+
+  .api-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 12px; }
+
+  .response-box {
+    background: #080a0e;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    min-height: 60px;
+    max-height: 120px;
+    overflow-y: auto;
+    white-space: pre;
+    margin-top: 10px;
+  }
+
+  /* ── Input ── */
+  .input-group { margin-bottom: 16px; }
+
+  .input-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .input-field {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .input-field:focus { border-color: var(--gold-dim); }
+
+  .input-field::placeholder { color: var(--text-muted); }
+
+  /* ── Health checks ── */
+  .health-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .health-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .health-icon { font-size: 22px; }
+
+  .health-label { font-size: 12px; color: var(--text-muted); }
+  .health-val { font-size: 13px; color: var(--text); font-weight: 500; margin-top: 2px; }
+  .health-val.ok { color: var(--green); }
+  .health-val.err { color: var(--red); }
+  .health-val.warn { color: var(--gold); }
+
+  /* ── Divider ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  /* ── Spinner ── */
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.1);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Toast ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.25s;
+    pointer-events: none;
+  }
+
+  #toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── Send Test Message ── */
+  .send-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+
+  textarea.input-field {
+    resize: vertical;
+    min-height: 80px;
+    font-family: 'Outfit', sans-serif;
+  }
+
+  .inline-row { display: flex; gap: 10px; }
+  .inline-row .input-field { flex: 1; }
+
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo-area">
+      <div class="logo-badge">L</div>
+      <div class="logo-name">Lopes Advocacia</div>
+      <div class="logo-sub">Painel de Controle</div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-section">Geral</div>
+      <button class="nav-item active" onclick="showPanel('dashboard')">
+        <span class="nav-icon">⬡</span> Dashboard
+      </button>
+      <button class="nav-item" onclick="showPanel('whatsapp')">
+        <span class="nav-icon">💬</span> WhatsApp
+      </button>
+
+      <div class="nav-section" style="margin-top:8px;">Ferramentas</div>
+      <button class="nav-item" onclick="showPanel('api')">
+        <span class="nav-icon">⚡</span> Testar API
+      </button>
+      <button class="nav-item" onclick="showPanel('logs')">
+        <span class="nav-icon">▤</span> Logs
+      </button>
+      <button class="nav-item" onclick="showPanel('config')">
+        <span class="nav-icon">⚙</span> Configuração
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span class="status-dot"></span>
+      Servidor online
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <div class="page-title" id="page-title">Dashboard</div>
+      <div class="topbar-actions">
+        <div class="server-url-badge">
+          Base URL: <span id="base-url-display">http://localhost:3001</span>
+        </div>
+        <button class="btn btn-ghost" onclick="checkHealth()">↻ Atualizar</button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ══ DASHBOARD ══ -->
+      <div class="panel active" id="panel-dashboard">
+
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-label">Status do Servidor</div>
+            <div class="card-value green" id="stat-server">—</div>
+            <div class="card-sub" id="stat-uptime">Verificando...</div>
+          </div>
+          <div class="card">
+            <div class="card-label">WhatsApp</div>
+            <div class="card-value" id="stat-wa">—</div>
+            <div class="card-sub" id="stat-wa-sub">Verificando...</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Banco de Dados</div>
+            <div class="card-value" id="stat-db">—</div>
+            <div class="card-sub">PostgreSQL</div>
+          </div>
+          <div class="card">
+            <div class="card-label">Monitoramento</div>
+            <div class="card-value" id="stat-mon">—</div>
+            <div class="card-sub" id="stat-mon-sub">DataJud / Processos</div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <div class="section-title">Saúde dos Serviços</div>
+          <button class="btn btn-ghost" onclick="checkHealth()">Verificar agora</button>
+        </div>
+
+        <div class="health-grid" id="health-grid">
+          <div class="health-item">
+            <div class="health-icon">🌐</div>
+            <div>
+              <div class="health-label">API Server</div>
+              <div class="health-val" id="h-server">Verificando...</div>
+            </div>
+          </div>
+          <div class="health-item">
+            <div class="health-icon">💬</div>
+            <div>
+              <div class="health-label">Evolution API</div>
+              <div class="health-val" id="h-whatsapp">Verificando...</div>
+            </div>
+          </div>
+          <div class="health-item">
+            <div class="health-icon">🗄️</div>
+            <div>
+              <div class="health-label">PostgreSQL</div>
+              <div class="health-val" id="h-db">Verificando...</div>
+            </div>
+          </div>
+          <div class="health-item">
+            <div class="health-icon">⚖️</div>
+            <div>
+              <div class="health-label">Monitoramento</div>
+              <div class="health-val" id="h-mon">Verificando...</div>
+            </div>
+          </div>
+          <div class="health-item">
+            <div class="health-icon">🤖</div>
+            <div>
+              <div class="health-label">Groq AI</div>
+              <div class="health-val warn" id="h-ai">Ativo</div>
+            </div>
+          </div>
+          <div class="health-item">
+            <div class="health-icon">🔍</div>
+            <div>
+              <div class="health-label">Grok xAI (Web)</div>
+              <div class="health-val" id="h-grok">—</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="log-box" id="dash-log">
+          <div class="log-line">
+            <span class="log-time">--:--:--</span>
+            <span class="log-level-warn">WAIT</span>
+            <span class="log-msg">Aguardando conexão com o servidor...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ WHATSAPP ══ -->
+      <div class="panel" id="panel-whatsapp">
+
+        <div class="connect-box">
+          <div class="section-head" style="margin-bottom:20px;">
+            <div class="section-title">Conectar WhatsApp</div>
+            <div id="wa-status-badge" class="status-badge disconnected">
+              ● Desconectado
+            </div>
+          </div>
+
+          <div class="qr-area">
+            <div class="qr-frame" id="qr-frame">
+              <div class="qr-placeholder" id="qr-placeholder">
+                <div class="qr-icon">📱</div>
+                <div>Clique em<br><strong>"Gerar QR Code"</strong></div>
+              </div>
+              <img id="qr-img" style="display:none;width:100%;height:100%;object-fit:contain;" alt="QR Code">
+            </div>
+
+            <div class="qr-info">
+              <p style="font-size:13.5px;color:var(--text-dim);margin-bottom:16px;">
+                Escaneie o QR Code com o WhatsApp do número que será usado pelo bot do escritório.
+              </p>
+
+              <ol class="qr-steps">
+                <li>
+                  <span class="step-num">1</span>
+                  Abra o WhatsApp no celular
+                </li>
+                <li>
+                  <span class="step-num">2</span>
+                  Toque em <strong style="color:var(--text);">Menu (⋮)</strong> → Dispositivos conectados
+                </li>
+                <li>
+                  <span class="step-num">3</span>
+                  Toque em <strong style="color:var(--text);">"Conectar dispositivo"</strong>
+                </li>
+                <li>
+                  <span class="step-num">4</span>
+                  Aponte a câmera para o QR Code ao lado
+                </li>
+              </ol>
+
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button class="btn btn-primary" onclick="generateQR()">
+                  📱 Gerar QR Code
+                </button>
+                <button class="btn btn-ghost" onclick="checkWAStatus()">
+                  ↻ Verificar Status
+                </button>
+                <button class="btn btn-danger" onclick="disconnectWA()">
+                  ✕ Desconectar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Enviar mensagem de teste -->
+        <div class="section-head">
+          <div class="section-title">Enviar Mensagem de Teste</div>
+        </div>
+
+        <div class="send-box">
+          <div class="inline-row" style="margin-bottom:12px;">
+            <div style="flex:1;">
+              <label class="input-label">Número (com DDI)</label>
+              <input class="input-field" id="test-phone" placeholder="5599912345678" type="text">
+            </div>
+          </div>
+          <div class="input-group">
+            <label class="input-label">Mensagem</label>
+            <textarea class="input-field" id="test-msg" placeholder="Olá! Teste do sistema Lopes Advocacia ✅"></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="sendTestMessage()">
+            ▶ Enviar Mensagem
+          </button>
+        </div>
+
+        <div class="response-box" id="wa-response">// Resposta aparecerá aqui</div>
+      </div>
+
+      <!-- ══ API TESTER ══ -->
+      <div class="panel" id="panel-api">
+
+        <div class="input-group" style="max-width:400px;margin-bottom:24px;">
+          <label class="input-label">URL Base do Servidor</label>
+          <input class="input-field" id="base-url" value="http://localhost:3001" oninput="updateBaseUrl()">
+        </div>
+
+        <div class="api-grid">
+
+          <div class="api-card">
+            <div class="api-card-head">
+              <span class="method-badge method-get">GET</span>
+              <span class="api-path">/health</span>
+            </div>
+            <div class="api-card-body">
+              <div class="api-desc">Verifica status de todos os serviços</div>
+              <button class="btn btn-ghost" onclick="callEndpoint('GET','/health','resp-health')">Executar</button>
+              <div class="response-box" id="resp-health">// aguardando...</div>
+            </div>
+          </div>
+
+          <div class="api-card">
+            <div class="api-card-head">
+              <span class="method-badge method-get">GET</span>
+              <span class="api-path">/docs</span>
+            </div>
+            <div class="api-card-body">
+              <div class="api-desc">Lista todos os endpoints disponíveis</div>
+              <button class="btn btn-ghost" onclick="callEndpoint('GET','/docs','resp-docs')">Executar</button>
+              <div class="response-box" id="resp-docs">// aguardando...</div>
+            </div>
+          </div>
+
+          <div class="api-card">
+            <div class="api-card-head">
+              <span class="method-badge method-get">GET</span>
+              <span class="api-path">/api/whatsapp/status</span>
+            </div>
+            <div class="api-card-body">
+              <div class="api-desc">Status da conexão WhatsApp</div>
+              <button class="btn btn-ghost" onclick="callEndpoint('GET','/api/whatsapp/status','resp-wa-status')">Executar</button>
+              <div class="response-box" id="resp-wa-status">// aguardando...</div>
+            </div>
+          </div>
+
+          <div class="api-card">
+            <div class="api-card-head">
+              <span class="method-badge method-get">GET</span>
+              <span class="api-path">/api/whatsapp/qrcode</span>
+            </div>
+            <div class="api-card-body">
+              <div class="api-desc">Gera QR Code para conectar WhatsApp</div>
+              <button class="btn btn-ghost" onclick="callEndpoint('GET','/api/whatsapp/qrcode','resp-qr')">Executar</button>
+              <div class="response-box" id="resp-qr">// aguardando...</div>
+            </div>
+          </div>
+
+          <div class="api-card">
+            <div class="api-card-head">
+              <span class="method-badge method-get">GET</span>
+              <span class="api-path">/api/processos</span>
+            </div>
+            <div class="api-card-body">
+              <div class="api-desc">Lista processos cadastrados</div>
+              <button class="btn btn-ghost" onclick="callEndpoint('GET','/api/processos','resp-proc')">Executar</button>
+              <div class="response-box" id="resp-proc">// aguardando...</div>
+            </div>
+          </div>
+
+          <div class="api-card">
+            <div class="api-card-head">
+              <span class="method-badge method-get">GET</span>
+              <span class="api-path">/api/conversations</span>
+            </div>
+            <div class="api-card-body">
+              <div class="api-desc">Lista conversas ativas</div>
+              <button class="btn btn-ghost" onclick="callEndpoint('GET','/api/conversations','resp-conv')">Executar</button>
+              <div class="response-box" id="resp-conv">// aguardando...</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ══ LOGS ══ -->
+      <div class="panel" id="panel-logs">
+        <div class="section-head">
+          <div class="section-title">Log em Tempo Real</div>
+          <div style="display:flex;gap:10px;">
+            <button class="btn btn-ghost" onclick="clearLog()">Limpar</button>
+            <button class="btn btn-primary" onclick="startPollingLogs()">▶ Iniciar</button>
+          </div>
+        </div>
+        <div class="log-box" id="main-log" style="max-height:500px;">
+          <div class="log-line">
+            <span class="log-time">--:--:--</span>
+            <span class="log-level-warn">INFO</span>
+            <span class="log-msg">Clique em "Iniciar" para monitorar o servidor</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══ CONFIG ══ -->
+      <div class="panel" id="panel-config">
+        <div class="section-head" style="margin-bottom:24px;">
+          <div class="section-title">Configuração do Painel</div>
+        </div>
+
+        <div class="connect-box">
+          <div class="input-group">
+            <label class="input-label">URL do Servidor (Oracle / Local)</label>
+            <input class="input-field" id="cfg-url" placeholder="http://SEU-IP-ORACLE:3001">
+          </div>
+          <div class="input-group">
+            <label class="input-label">Nome da Instância Evolution</label>
+            <input class="input-field" id="cfg-instance" placeholder="lopes-advocacia">
+          </div>
+          <button class="btn btn-primary" onclick="saveConfig()">💾 Salvar</button>
+        </div>
+
+        <hr class="divider">
+
+        <div class="section-title" style="margin-bottom:16px;">Endpoints do Projeto</div>
+
+        <div style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-dim);line-height:2;">
+          <div><span style="color:var(--blue);">GET</span>    /health</div>
+          <div><span style="color:var(--blue);">GET</span>    /docs</div>
+          <div><span style="color:var(--blue);">GET</span>    /api/whatsapp/status</div>
+          <div><span style="color:var(--blue);">GET</span>    /api/whatsapp/qrcode</div>
+          <div><span style="color:var(--green);">POST</span>   /api/whatsapp/send</div>
+          <div><span style="color:var(--green);">POST</span>   /webhook</div>
+          <div><span style="color:var(--blue);">GET</span>    /api/conversations</div>
+          <div><span style="color:var(--blue);">GET</span>    /api/processos</div>
+          <div><span style="color:var(--blue);">GET</span>    /api/advogados</div>
+          <div><span style="color:var(--blue);">GET</span>    /api/analytics</div>
+          <div><span style="color:var(--blue);">GET</span>    /api/recovery</div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /shell -->
+
+<div id="toast"></div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────────────────────────
+  let BASE_URL = localStorage.getItem('base_url') || 'http://localhost:3001';
+  let logInterval = null;
+
+  document.getElementById('base-url').value = BASE_URL;
+  document.getElementById('cfg-url').value = BASE_URL;
+  document.getElementById('base-url-display').textContent = BASE_URL;
+
+  // ── Navigation ───────────────────────────────────────────────────────────────
+  const titles = {
+    dashboard: 'Dashboard',
+    whatsapp: 'Conectar WhatsApp',
+    api: 'Testar API',
+    logs: 'Logs do Servidor',
+    config: 'Configuração'
+  };
+
+  function showPanel(id) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('panel-' + id).classList.add('active');
+    document.getElementById('page-title').textContent = titles[id];
+    event.currentTarget.classList.add('active');
+  }
+
+  // ── Toast ────────────────────────────────────────────────────────────────────
+  function toast(msg, color = 'var(--text)') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.color = color;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ── URL ──────────────────────────────────────────────────────────────────────
+  function updateBaseUrl() {
+    BASE_URL = document.getElementById('base-url').value;
+    document.getElementById('base-url-display').textContent = BASE_URL;
+  }
+
+  function saveConfig() {
+    BASE_URL = document.getElementById('cfg-url').value;
+    localStorage.setItem('base_url', BASE_URL);
+    document.getElementById('base-url').value = BASE_URL;
+    document.getElementById('base-url-display').textContent = BASE_URL;
+    toast('✅ Configuração salva!', 'var(--green)');
+  }
+
+  // ── API call helper ──────────────────────────────────────────────────────────
+  async function callEndpoint(method, path, responseId) {
+    const box = document.getElementById(responseId);
+    box.textContent = '⏳ Carregando...';
+    try {
+      const r = await fetch(BASE_URL + path, { method });
+      const data = await r.json();
+      box.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      box.textContent = '❌ Erro: ' + e.message + '\n\nVerifique se o servidor está rodando\ne se a URL base está correta.';
+    }
+  }
+
+  // ── Health check ─────────────────────────────────────────────────────────────
+  async function checkHealth() {
+    const log = document.getElementById('dash-log');
+    addLog(log, 'INFO', 'Verificando status dos serviços...');
+
+    try {
+      const r = await fetch(BASE_URL + '/health');
+      const data = await r.json();
+
+      // Stats
+      document.getElementById('stat-server').textContent = 'Online';
+      document.getElementById('stat-server').className = 'card-value green';
+
+      const uptime = Math.floor(data.uptime);
+      const h = Math.floor(uptime / 3600);
+      const m = Math.floor((uptime % 3600) / 60);
+      document.getElementById('stat-uptime').textContent = `Uptime: ${h}h ${m}m`;
+
+      // WhatsApp
+      const waOk = data.services?.whatsapp === 'connected';
+      document.getElementById('stat-wa').textContent = waOk ? 'Conectado' : 'Desconectado';
+      document.getElementById('stat-wa').className = 'card-value ' + (waOk ? 'green' : 'red');
+      document.getElementById('stat-wa-sub').textContent = waOk ? 'Pronto para atender' : 'Precisa conectar';
+
+      // DB
+      document.getElementById('stat-db').textContent = 'OK';
+      document.getElementById('stat-db').className = 'card-value green';
+
+      // Mon
+      const monRun = data.services?.monitoramentoProcessual?.isRunning;
+      document.getElementById('stat-mon').textContent = monRun ? 'Ativo' : 'Inativo';
+      document.getElementById('stat-mon').className = 'card-value ' + (monRun ? 'green' : 'gold');
+      document.getElementById('stat-mon-sub').textContent = data.services?.monitoramentoProcessual?.checkInterval || '';
+
+      // Health items
+      document.getElementById('h-server').textContent = '✓ Online';
+      document.getElementById('h-server').className = 'health-val ok';
+
+      document.getElementById('h-whatsapp').textContent = waOk ? '✓ Conectado' : '✗ Desconectado';
+      document.getElementById('h-whatsapp').className = 'health-val ' + (waOk ? 'ok' : 'err');
+
+      document.getElementById('h-db').textContent = '✓ Conectado';
+      document.getElementById('h-db').className = 'health-val ok';
+
+      document.getElementById('h-mon').textContent = monRun ? '✓ Rodando' : '⚠ Parado';
+      document.getElementById('h-mon').className = 'health-val ' + (monRun ? 'ok' : 'warn');
+
+      document.getElementById('h-grok').textContent = process?.env?.XAI_API_KEY ? '✓ Configurado' : '⚠ Sem chave';
+
+      addLog(log, 'OK', 'Health check concluído — servidor saudável');
+      toast('✅ Serviços verificados!', 'var(--green)');
+
+    } catch (e) {
+      document.getElementById('stat-server').textContent = 'Offline';
+      document.getElementById('stat-server').className = 'card-value red';
+      document.getElementById('h-server').textContent = '✗ Inacessível';
+      document.getElementById('h-server').className = 'health-val err';
+      addLog(log, 'ERR', 'Servidor inacessível: ' + e.message);
+      toast('❌ Servidor não responde', 'var(--red)');
+    }
+  }
+
+  // ── WhatsApp ─────────────────────────────────────────────────────────────────
+  async function generateQR() {
+    const frame = document.getElementById('qr-frame');
+    const img = document.getElementById('qr-img');
+    const placeholder = document.getElementById('qr-placeholder');
+
+    placeholder.innerHTML = '<div class="spinner"></div><div style="margin-top:8px;font-size:11px;color:#888;">Gerando...</div>';
+
+    try {
+      const r = await fetch(BASE_URL + '/api/whatsapp/qrcode');
+      const data = await r.json();
+
+      const qrData = data.qrcode || data.code || data.base64 || data.qr;
+
+      if (qrData) {
+        const src = qrData.startsWith('data:') ? qrData : 'data:image/png;base64,' + qrData;
+        img.src = src;
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+        toast('📱 QR Code gerado! Escaneie agora.', 'var(--gold)');
+
+        // Auto-check status after scan
+        setTimeout(checkWAStatus, 15000);
+      } else {
+        placeholder.innerHTML = '<div style="color:#e74c3c;font-size:12px;padding:20px;">Resposta inesperada do servidor</div>';
+        document.getElementById('wa-response').textContent = JSON.stringify(data, null, 2);
+      }
+    } catch (e) {
+      placeholder.innerHTML = '<div style="color:#e74c3c;font-size:12px;padding:20px;">❌ ' + e.message + '</div>';
+      toast('❌ Erro ao gerar QR Code', 'var(--red)');
+    }
+  }
+
+  async function checkWAStatus() {
+    try {
+      const r = await fetch(BASE_URL + '/api/whatsapp/status');
+      const data = await r.json();
+      const badge = document.getElementById('wa-status-badge');
+      const connected = data.state === 'open' || data.connected === true || data.status === 'connected';
+
+      badge.textContent = connected ? '● Conectado' : '● Desconectado';
+      badge.className = 'status-badge ' + (connected ? 'connected' : 'disconnected');
+
+      document.getElementById('wa-response').textContent = JSON.stringify(data, null, 2);
+      toast(connected ? '✅ WhatsApp conectado!' : '⚠ WhatsApp desconectado', connected ? 'var(--green)' : 'var(--gold)');
+    } catch (e) {
+      toast('❌ Erro ao verificar status', 'var(--red)');
+    }
+  }
+
+  async function disconnectWA() {
+    if (!confirm('Desconectar o WhatsApp? O bot vai parar de funcionar.')) return;
+    try {
+      const r = await fetch(BASE_URL + '/api/whatsapp/disconnect', { method: 'POST' });
+      const data = await r.json();
+      document.getElementById('wa-status-badge').textContent = '● Desconectado';
+      document.getElementById('wa-status-badge').className = 'status-badge disconnected';
+      document.getElementById('wa-response').textContent = JSON.stringify(data, null, 2);
+      toast('WhatsApp desconectado', 'var(--gold)');
+    } catch (e) {
+      toast('❌ ' + e.message, 'var(--red)');
+    }
+  }
+
+  async function sendTestMessage() {
+    const phone = document.getElementById('test-phone').value.replace(/\D/g, '');
+    const msg = document.getElementById('test-msg').value;
+
+    if (!phone || !msg) {
+      toast('⚠ Preencha o número e a mensagem', 'var(--gold)');
+      return;
+    }
+
+    try {
+      const r = await fetch(BASE_URL + '/api/whatsapp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ number: phone, text: msg })
+      });
+      const data = await r.json();
+      document.getElementById('wa-response').textContent = JSON.stringify(data, null, 2);
+      toast('✅ Mensagem enviada!', 'var(--green)');
+    } catch (e) {
+      document.getElementById('wa-response').textContent = '❌ ' + e.message;
+      toast('❌ Erro ao enviar', 'var(--red)');
+    }
+  }
+
+  // ── Logs ─────────────────────────────────────────────────────────────────────
+  function addLog(box, level, msg) {
+    const now = new Date().toLocaleTimeString('pt-BR');
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    const cls = level === 'OK' ? 'log-level-ok' : level === 'ERR' ? 'log-level-err' : 'log-level-warn';
+    line.innerHTML = `<span class="log-time">${now}</span><span class="${cls}">${level}</span><span class="log-msg">${msg}</span>`;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function clearLog() {
+    document.getElementById('main-log').innerHTML = '';
+  }
+
+  function startPollingLogs() {
+    if (logInterval) { clearInterval(logInterval); logInterval = null; toast('⏸ Log pausado'); return; }
+    const log = document.getElementById('main-log');
+    addLog(log, 'INFO', 'Monitoramento iniciado — polling a cada 5s');
+
+    logInterval = setInterval(async () => {
+      try {
+        const r = await fetch(BASE_URL + '/health');
+        const data = await r.json();
+        const waOk = data.services?.whatsapp === 'connected';
+        addLog(log, 'OK', `Server OK | WA: ${waOk ? 'conectado' : 'desconectado'} | Uptime: ${Math.floor(data.uptime)}s`);
+      } catch (e) {
+        addLog(log, 'ERR', 'Servidor não responde: ' + e.message);
+      }
+    }, 5000);
+
+    toast('▶ Log iniciado', 'var(--green)');
+  }
+
+  // ── Init ─────────────────────────────────────────────────────────────────────
+  checkHealth();
+</script>
+</body>
+</html>

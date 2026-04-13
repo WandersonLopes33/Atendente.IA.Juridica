@@ -59,7 +59,8 @@
     "tesseract.js": "^7.0.0",
     "uuid": "^9.0.1",
     "winston": "^3.19.0",
-    "winston-daily-rotate-file": "^4.7.1"
+    "winston-daily-rotate-file": "^4.7.1",
+    "xai-sdk": "^1.0.0-alpha.0"
   },
   "devDependencies": {
     "@prisma/client": "^5.22.0",
