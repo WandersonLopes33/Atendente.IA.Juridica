@@ -1,6 +1,11 @@
 const { Pool } = require('pg');
 const logger = require('../utils/logger');
 
+// DEBUG TEMPORÁRIO — remover após confirmar
+console.log('>>> DATABASE_URL:', process.env.DATABASE_URL ? 'DEFINIDA' : 'UNDEFINED');
+console.log('>>> NODE_ENV:', process.env.NODE_ENV);
+console.log('>>> DB_PASSWORD:', process.env.DB_PASSWORD ? 'DEFINIDA' : 'UNDEFINED');
+
 // Configuração do pool de conexões PostgreSQL
 const pool = new Pool(
   process.env.DATABASE_URL
