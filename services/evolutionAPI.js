@@ -3,9 +3,9 @@ const logger = require('../utils/logger');
 
 class EvolutionAPIService {
     constructor() {
-        this.baseURL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
-        this.apiKey = process.env.EVOLUTION_API_KEY;
-        this.instanceName = process.env.EVOLUTION_INSTANCE_NAME || 'viagemexpress';
+        this.baseURL = process.env.EVOLUTION_API_URL || 'https://api-production-e7e8.up.railway.app';
+        this.apiKey = process.env.EVOLUTION_API_KEY || 'ViagemExpress_SecretKey_2025';
+        this.instanceName = process.env.EVOLUTION_INSTANCE_NAME || process.env.EVOLUTION_INSTANCE || 'viagemexpress';
         
         this.client = axios.create({
             baseURL: this.baseURL,
