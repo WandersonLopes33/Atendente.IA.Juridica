@@ -17,7 +17,7 @@ const monitoramento = require('../services/monitoramentoSilencioso');
 // Textos, imagens e documentos são acumulados juntos.
 // A IA só é chamada uma vez, com contexto completo, após 2 minutos de silêncio.
 const messageBuffer = {};
-const BUFFER_DELAY_MS = 2 * 60 * 1000; // 2 minutos
+const BUFFER_DELAY_MS = 40 * 1000; // 40 segundos
 
 function bufferMessage(phoneNumber, messageText, processFn) {
     if (messageBuffer[phoneNumber]) {
