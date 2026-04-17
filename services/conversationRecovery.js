@@ -1,6 +1,5 @@
 const logger = require('../utils/logger');
 const db = require('./database');
-const evolutionAPI = require('./evolutionAPI');
 
 class ConversationRecoveryService {
     constructor() {
@@ -9,10 +8,7 @@ class ConversationRecoveryService {
         this.isRunning = false;
         this.startupDelay = 600000; // 10 minutos (era 30s — causava fetch failed no boot)
 
-        logger.info('Serviço de Recuperação de Conversas inicializado', {
-            checkInterval: `${this.checkInterval / 1000}s`,
-            abandonedThreshold: `${this.abandonedThreshold / 1000}s`
-        });
+
     }
 
     start() {
@@ -163,25 +159,14 @@ class ConversationRecoveryService {
                 return;
             }
 
-            const recoveryMessage = await this.generateRecoveryMessage(messages, conversation, analysis);
-
-            await evolutionAPI.sendTextMessage(conversation.telefone, recoveryMessage);
-
             await db.query(
-                `INSERT INTO messages (conversation_id, sender, conteudo, tipo)
-                 VALUES ($1, $2, $3, $4)`,
-                [conversation.id, 'bot', recoveryMessage, 'text']
+                `UPDATE conversations SET status = 'closed', ultimo_estado = $1, updated_at = NOW() WHERE id = $2`,
+                ['aguardando_retorno', conversation.id]
             );
 
-            await db.query(
-                `UPDATE conversations SET ultimo_estado = $1, updated_at = NOW() WHERE id = $2`,
-                ['recuperacao_automatica', conversation.id]
-            );
-
-            logger.info('✅ Conversa recuperada com sucesso', {
+            logger.info('✅ Conversa encerrada — aguardando retorno do cliente', {
                 conversationId: conversation.id,
-                cliente: conversation.cliente_nome,
-                messageSent: recoveryMessage.substring(0, 50) + '...'
+                cliente: conversation.cliente_nome
             });
 
         } catch (error) {
@@ -274,20 +259,6 @@ IMPORTANTE: Classifique como "pessoal" se a conversa NÃO tem relação com assu
         }
     }
 
-    async generateRecoveryMessage(messages, conversation, analysis) {
-        if (analysis.suggestedResponse && analysis.suggestedResponse.length > 10) {
-            return analysis.suggestedResponse;
-        }
-
-        const templates = {
-            consulta_processo: `Olá, ${conversation.cliente_nome}! Você entrou em contato sobre andamento de processo. O Dr. Wanderson Mailson está disponível para atendê-lo. Poderia confirmar o número do processo ou seu CPF?`,
-            agendamento: `Olá, ${conversation.cliente_nome}! Vi que você tinha interesse em consulta com a Lopes Advocacia. Ainda gostaria de agendar? Temos disponibilidade esta semana.`,
-            novo_caso: `Olá, ${conversation.cliente_nome}! Você mencionou precisar de assistência jurídica. Ainda posso ajudá-lo a iniciar seu atendimento com o Dr. Wanderson Mailson?`,
-            duvida_geral: `Olá, ${conversation.cliente_nome}! Nossa conversa ficou pendente. Posso ajudá-lo com algo relacionado à Lopes Advocacia?`
-        };
-
-        return templates[analysis.category] || templates.duvida_geral;
-    }
 
     async markAsIgnored(conversationId) {
         try {

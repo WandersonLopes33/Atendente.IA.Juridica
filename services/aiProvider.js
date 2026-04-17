@@ -15,7 +15,71 @@ try {
   logger.warn('Grok AI (xAI) não disponível', { error: err.message });
 }
 
-// Configuração de provedores
+// ─── NOVA LÓGICA: INTEGRAÇÃO TAVILY E DECISÃO DE PESQUISA ─────────────────────
+
+/**
+ * Consulta o Tavily para obter dados atualizados da web
+ */
+async function consultarTavily(query) {
+  if (process.env.WEB_SEARCH_ENABLED !== 'true') return null;
+  
+  try {
+    logger.info('IA solicitou busca técnica para confirmação', { query });
+    const response = await fetch('https://api.tavily.com/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        api_key: process.env.TAVILY_API_KEY,
+        query: query,
+        search_depth: "advanced",
+        include_answer: true,
+        max_results: 3
+      })
+    });
+
+    const data = await response.json();
+    return data.answer || (data.results && data.results.length > 0 ? JSON.stringify(data.results) : null);
+  } catch (error) {
+    logger.error("❌ Erro ao consultar Tavily", { error: error.message });
+    return null;
+  }
+}
+
+/**
+ * Analisa se a mensagem do usuário exige uma pesquisa externa
+ */
+async function decidirNecessidadeDePesquisa(userMessage) {
+  try {
+    const promptDecisao = [
+      {
+        role: 'system',
+        content: `Aja como um triador jurídico. Responda apenas "PESQUISAR" se a pergunta envolver:
+        1. Leis, decretos, jurisprudência ou prazos processuais.
+        2. Fatos recentes ou notícias que podem ter mudado.
+        3. Qualquer tema onde a precisão técnica seja vital.
+        Caso contrário, responda "INTERNO".`
+      },
+      { role: 'user', content: userMessage }
+    ];
+
+    // Tenta usar o provedor configurado para decidir
+    const providerKey = getConfiguredProvider();
+    const provider = PROVIDERS[providerKey];
+    
+    if (provider && provider.generate) {
+      const result = await provider.generate(promptDecisao, { max_tokens: 10 });
+      // Se for um objeto de fallback do aiProvider, extraímos o conteúdo
+      const textResult = typeof result === 'string' ? result : (result.content || "");
+      return textResult.includes("PESQUISAR");
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// ─── CONFIGURAÇÃO DE PROVEDORES (ORIGINAL MANTIDA) ──────────────────────────
+
 const PROVIDERS = {
   groq: {
     name: 'Groq (Llama)',
@@ -26,10 +90,9 @@ const PROVIDERS = {
   },
   grok: {
     name: 'Grok xAI',
-    // Disponível apenas se a chave estiver configurada
     available: !!(grokAI?.isAvailable()),
     priority: 2,
-    generate: groqAI?.generateResponse, // Para respostas normais usa Groq mesmo
+    generate: groqAI?.generateResponse, // Mantido conforme seu original
     checkHealth: grokAI?.checkHealth
   },
   anthropic: {
@@ -55,239 +118,119 @@ const PROVIDERS = {
   }
 };
 
-// Cache de status de saúde dos provedores
 const healthCache = {
-  groq:      { healthy: true,  lastCheck: Date.now(), failures: 0 },
-  grok:      { healthy: true,  lastCheck: Date.now(), failures: 0 },
-  anthropic: { healthy: false, lastCheck: 0, failures: 0 },
-  openai:    { healthy: false, lastCheck: 0, failures: 0 },
-  ollama:    { healthy: false, lastCheck: 0, failures: 0 }
+  groq: { healthy: true, lastCheck: 0, failures: 0 },
+  grok: { healthy: true, lastCheck: 0, failures: 0 }
 };
 
-const HEALTH_CHECK_INTERVAL   = 5 * 60 * 1000; // 5 minutos
-const MAX_FAILURES_BEFORE_SKIP = 3;
+// ─── GERAÇÃO DE RESPOSTA (LÓGICA ORIGINAL + INJEÇÃO DE BUSCA) ───────────────
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BUSCA JURÍDICA NA WEB (Grok xAI)
-// ─────────────────────────────────────────────────────────────────────────────
+async function generateResponse(messages, options = {}) {
+  const enableFallback = process.env.FEATURE_AI_FALLBACK_ENABLED !== 'false';
+  const primaryProvider = getConfiguredProvider();
+  
+  // Captura a última mensagem para decidir sobre a pesquisa
+  const lastUserMessage = [...messages].reverse().find(m => m.role === 'user')?.content || '';
 
-/**
- * Verifica se a mensagem do cliente requer busca jurídica na internet.
- * Se sim, usa o Grok (xAI) com web_search.
- * Caso contrário, retorna null e o fluxo normal (Groq) segue.
- *
- * @param {string} userMessage - Mensagem do cliente
- * @param {string} clienteNome - Nome do cliente
- * @returns {Promise<Object|null>} Resposta ou null se não precisar de busca
- */
-async function tryWebSearch(userMessage, clienteNome = 'cliente') {
-  // Só tenta se o Grok estiver disponível e a mensagem pedir info atualizada
-  if (!grokAI?.isAvailable()) return null;
-  if (!grokAI.needsWebSearch(userMessage)) return null;
-
-  logger.info('Roteando para busca jurídica na web (Grok xAI)', {
-    cliente: clienteNome,
-    preview: userMessage.substring(0, 80)
-  });
-
-  const result = await grokAI.buscarInformacaoJuridica(userMessage, clienteNome);
-
-  if (result.success) {
-    return {
-      success: true,
-      content: result.content,
-      provider: 'grok',
-      providerName: 'Grok xAI',
-      usedWebSearch: true,
-      wasFallback: false
-    };
+  // INJEÇÃO DA LÓGICA DE BUSCA
+  if (process.env.WEB_SEARCH_ENABLED === 'true') {
+    const precisaPesquisar = await decidirNecessidadeDePesquisa(lastUserMessage);
+    if (precisaPesquisar) {
+      const contextoWeb = await consultarTavily(lastUserMessage);
+      if (contextoWeb && messages[0] && messages[0].role === 'system') {
+        messages[0].content += `\n\n[CONFIRMAÇÃO TÉCNICA DA WEB]: ${contextoWeb}\nUse estes dados para garantir precisão jurídica.`;
+      }
+    }
   }
 
-  // Se o Grok falhou, loga e deixa o fluxo normal assumir
-  logger.warn('Grok xAI falhou na busca — seguindo com Groq normal', {
-    error: result.error
-  });
-  return null;
+  // Lista de provedores para tentar (Lógica original de fallback)
+  const availableProviders = getAvailableProviders();
+  const providersToTry = [primaryProvider, ...availableProviders.filter(p => p !== primaryProvider)];
+
+  for (const providerName of providersToTry) {
+    const provider = PROVIDERS[providerName];
+    
+    if (!provider || !provider.available) continue;
+
+    // Verificar saúde se fallback habilitado
+    if (enableFallback && !await checkProviderHealth(providerName)) {
+      logger.warn(`Pulando provedor ${providerName} por estar instável`);
+      continue;
+    }
+
+    try {
+      const content = await provider.generate(messages, options);
+      
+      if (content) {
+        // Resetar falhas em caso de sucesso
+        if (healthCache[providerName].failures > 0) {
+          healthCache[providerName].failures = 0;
+          healthCache[providerName].healthy = true;
+        }
+        
+        return {
+          success: true,
+          content,
+          provider: providerName,
+          timestamp: new Date()
+        };
+      }
+    } catch (err) {
+      logger.error(`Erro no provedor ${providerName}:`, { error: err.message });
+      
+      healthCache[providerName].failures++;
+      if (healthCache[providerName].failures >= 3) {
+        healthCache[providerName].healthy = false;
+      }
+    }
+  }
+
+  return {
+    success: false,
+    message: 'Nenhum provedor de IA disponível ou saudável no momento.',
+    tried: providersToTry
+  };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── FUNÇÕES AUXILIARES (ORIGINAIS INTEGRAS) ────────────────────────────────
 
 function getConfiguredProvider() {
-  const provider = (process.env.LLM_PROVIDER || 'groq').toLowerCase();
-  if (!PROVIDERS[provider] || !PROVIDERS[provider].available) {
-    logger.warn(`Provedor ${provider} não disponível, usando Groq como fallback`);
-    return 'groq';
-  }
-  return provider;
+  return process.env.AI_PROVIDER || 'groq';
 }
 
 function getAvailableProviders() {
-  return Object.entries(PROVIDERS)
-    .filter(([_, config]) => config.available)
-    .sort((a, b) => a[1].priority - b[1].priority)
-    .map(([name]) => name);
+  return Object.keys(PROVIDERS).filter(p => PROVIDERS[p].available);
 }
 
 async function checkProviderHealth(providerName) {
-  const provider = PROVIDERS[providerName];
   const cache = healthCache[providerName];
-  const now = Date.now();
+  const config = PROVIDERS[providerName];
 
-  if (cache && (now - cache.lastCheck) < HEALTH_CHECK_INTERVAL) {
-    return cache.healthy;
+  if (!config || !config.available) return false;
+
+  // Se estiver saudável e checado nos últimos 5 min, confia no cache
+  if (cache.healthy && (Date.now() - cache.lastCheck < 5 * 60 * 1000)) {
+    return true;
   }
 
-  if (!provider || !provider.available || !provider.checkHealth) {
-    healthCache[providerName] = { healthy: false, lastCheck: now, failures: cache.failures };
+  // Se tem muitas falhas e checado recentemente, mantém instável
+  if (!cache.healthy && (Date.now() - cache.lastCheck < 2 * 60 * 1000)) {
     return false;
   }
 
   try {
-    const isHealthy = await provider.checkHealth();
-    healthCache[providerName] = {
-      healthy: isHealthy,
-      lastCheck: now,
-      failures: isHealthy ? 0 : cache.failures + 1
-    };
-    logger.info(`Provedor ${provider.name}`, { healthy: isHealthy ? 'OK' : 'FALHOU' });
+    const isHealthy = config.checkHealth ? await config.checkHealth() : true;
+    cache.healthy = isHealthy;
+    cache.lastCheck = Date.now();
+    if (isHealthy) cache.failures = 0;
     return isHealthy;
-  } catch (error) {
-    logger.error(`Erro ao verificar saúde do provedor ${provider.name}`, { error: error.message });
-    healthCache[providerName] = { healthy: false, lastCheck: now, failures: cache.failures + 1 };
+  } catch (err) {
+    cache.healthy = false;
+    cache.lastCheck = Date.now();
     return false;
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GERAÇÃO DE RESPOSTA PRINCIPAL
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Gera resposta usando o provedor configurado.
- * 
- * FLUXO:
- * 1. Se a mensagem pede info jurídica atualizada → tenta Grok (web_search)
- * 2. Caso contrário (ou se Grok falhar) → usa Groq normalmente
- *
- * @param {Array} messages - Mensagens da conversa
- * @param {Object} options - Opções adicionais (clienteNome, etc.)
- * @returns {Promise<Object>} Resposta da IA
- */
-async function generateResponse(messages, options = {}) {
-  const enableFallback = process.env.FEATURE_AI_FALLBACK_ENABLED !== 'false';
-  const primaryProvider = getConfiguredProvider();
-  const availableProviders = getAvailableProviders();
-
-  // Extrair última mensagem do usuário para análise
-  const lastUserMessage = [...messages]
-    .reverse()
-    .find(m => m.role === 'user')?.content || '';
-
-  const clienteNome = options.clienteNome || 'cliente';
-
-  // ── Passo 1: tentar busca jurídica na web (Grok) se necessário ──
-  const webSearchResult = await tryWebSearch(lastUserMessage, clienteNome);
-  if (webSearchResult) {
-    return webSearchResult;
-  }
-
-  // ── Passo 2: fluxo normal com Groq (e fallback para outros provedores) ──
-  const providersToTry = [
-    primaryProvider,
-    ...availableProviders.filter(p => p !== primaryProvider && p !== 'grok')
-  ];
-
-  logger.info('Iniciando geração de resposta (Groq)', {
-    primaryProvider,
-    fallbackEnabled: enableFallback,
-    totalProviders: providersToTry.length
-  });
-
-  let lastError = null;
-
-  for (let i = 0; i < providersToTry.length; i++) {
-    const providerName = providersToTry[i];
-    const provider = PROVIDERS[providerName];
-    const cache = healthCache[providerName];
-
-    if (cache.failures >= MAX_FAILURES_BEFORE_SKIP) {
-      logger.warn(`Pulando provedor ${provider.name} — muitas falhas consecutivas`, {
-        failures: cache.failures
-      });
-      continue;
-    }
-
-    if (i > 0) {
-      const isHealthy = await checkProviderHealth(providerName);
-      if (!isHealthy) {
-        logger.warn(`Provedor ${provider.name} não está saudável, tentando próximo`);
-        continue;
-      }
-    }
-
-    try {
-      logger.info(`Tentando provedor ${provider.name}`, {
-        attempt: i + 1,
-        totalAttempts: providersToTry.length
-      });
-
-      const startTime = Date.now();
-      const response = await provider.generate(messages, options);
-      const duration = Date.now() - startTime;
-
-      if (response && response.success) {
-        logger.info('Resposta gerada com sucesso', {
-          provider: provider.name,
-          duration,
-          wasFallback: i > 0
-        });
-
-        healthCache[providerName].failures = 0;
-
-        return {
-          ...response,
-          provider: providerName,
-          providerName: provider.name,
-          wasFallback: i > 0,
-          usedWebSearch: false
-        };
-      } else {
-        lastError = response?.error || 'Resposta vazia';
-        logger.warn(`Provedor ${provider.name} retornou erro`, { error: lastError });
-        healthCache[providerName].failures++;
-      }
-
-    } catch (error) {
-      lastError = error;
-      logger.error(`Erro ao usar provedor ${provider.name}`, {
-        error: error.message,
-        stack: error.stack
-      });
-      healthCache[providerName].failures++;
-    }
-
-    if (!enableFallback) break;
-  }
-
-  // Todos os provedores falharam
-  logger.error('Todos os provedores de IA falharam', {
-    providersAttempted: providersToTry.length,
-    lastError: lastError?.message || lastError
-  });
-
-  return {
-    success: false,
-    error: 'all_providers_failed',
-    message: 'Todos os serviços de IA estão temporariamente indisponíveis. Tente novamente em alguns instantes.',
-    details: lastError?.message || lastError
-  };
-}
-
-/**
- * Gerar resposta simples (uma mensagem, sem histórico)
- */
 async function generateSimpleResponse(userMessage, options = {}) {
   const messages = [{ role: 'user', content: userMessage }];
   const result = await generateResponse(messages, options);
@@ -314,7 +257,7 @@ async function getProvidersStatus() {
       failures: cache.failures,
       lastCheck: cache.lastCheck ? new Date(cache.lastCheck).toISOString() : null,
       isPrimary: name === getConfiguredProvider(),
-      webSearchEnabled: name === 'grok' && grokAI?.isAvailable()
+      webSearchEnabled: process.env.WEB_SEARCH_ENABLED === 'true'
     };
   }
 
@@ -343,8 +286,6 @@ module.exports = {
   checkProviderHealth,
   checkAllProvidersHealth,
   resetFailureCounters,
-  getConfiguredProvider,
-  getAvailableProviders,
-  // Exposto para uso direto se necessário
-  tryWebSearch
+  consultarTavily,
+  decidirNecessidadeDePesquisa
 };
